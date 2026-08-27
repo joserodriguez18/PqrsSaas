@@ -1,3 +1,4 @@
+using Pgvector;
 namespace PqrsSaas.Domain.Entities;
 
 public enum RolUsuario
@@ -21,7 +22,8 @@ public class KnowledgeBaseArticle
     public string Respuesta { get; set; } = default!;
 
     // Generado con gemini-embedding-001, output_dimensionality=768
-    public float[] Embedding { get; set; } = default!;
+    public Vector Embedding { get; set; } = default!;
+
 }
 
 public enum TipoPqrs
