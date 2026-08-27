@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: pqrs-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pqrs_control
+    ports:
+      - "5432:5432"
+    volumes:
+      - pqrs_pg_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: src/PqrsSaas.Api/Dockerfile
+    container_name: pqrs-api
+    depends_on:
+      - postgres
+    ports:
+      - "5000:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # BD de control (catálogo de tenants)
+      ConnectionStrings__ControlDb: "Host=postgres;Database=pqrs_control;Username=postgres;Password=postgres"
+      # Plantilla para construir la conexión de CADA base de tenant en runtime ({db} se reemplaza por NombreBaseDatos)
+      ConnectionStrings__TenantTemplate: "Host=postgres;Database={db};Username=postgres;Password=postgres"
+      # Conexión administrativa (a la BD 'postgres') usada SOLO para ejecutar CREATE DATABASE al registrar un tenant
+      ConnectionStrings__TenantAdmin: "Host=postgres;Database=postgres;Username=postgres;Password=postgres"
+      Jwt__Secret: "${JWT_SECRET}"
+      Jwt__Issuer: "PqrsSaas"
+      Jwt__Audience: "PqrsSaasClientes"
+      Jwt__ExpirationMinutes: "120"
+      Gemini__ApiKey: "${GEMINI_API_KEY}"
+      Gemini__EmbeddingModel: "gemini-embedding-001"
+      Gemini__GenerationModel: "gemini-2.5-flash-lite"
+
+volumes:
+  pqrs_pg_data:

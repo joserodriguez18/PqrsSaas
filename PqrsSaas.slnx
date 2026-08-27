@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PqrsSaas.Api/PqrsSaas.Api.csproj" />
+    <Project Path="src/PqrsSaas.Application/PqrsSaas.Application.csproj" />
+    <Project Path="src/PqrsSaas.Domain/PqrsSaas.Domain.csproj" />
+    <Project Path="src/PqrsSaas.Infrastructure/PqrsSaas.Infrastructure.csproj" />
+  </Folder>
+</Solution>
