@@ -47,4 +47,32 @@ public class TokenService
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    public string GenerarTokenSuperAdmin(SuperAdmin superAdmin)
+    {
+        var secret = _config["Jwt:Secret"]
+            ?? throw new InvalidOperationException("Falta Jwt:Secret en la configuración.");
+        var issuer = _config["Jwt:Issuer"];
+        var audience = _config["Jwt:Audience"];
+        var minutos = int.TryParse(_config["Jwt:ExpirationMinutes"], out var m) ? m : 120;
+
+        var claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, superAdmin.Id.ToString()),
+            new Claim(ClaimTypes.Email, superAdmin.Email),
+            new Claim(ClaimTypes.Role, "SuperAdmin")
+        };
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(minutos),
+            signingCredentials: creds);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 }

@@ -3,10 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using PqrsSaas.Domain.Entities;
 using PqrsSaas.Infrastructure.Persistence;
 using PqrsSaas.Infrastructure.Provisioning;
+using PqrsSaas.Infrastructure.Services;
 
 namespace PqrsSaas.Api.Controllers;
 
-public record RegistrarTenantRequest(string Nombre, string DominioPermitido, string EmailAdministrador);
+public record RegistrarTenantRequest(string Nombre, string DominioPermitido, string EmailAdministrador, string[]? DominiosPermitidos = null);
 
 [ApiController]
 [Route("api/v1/tenants")]
@@ -14,11 +15,15 @@ public class TenantsController : ControllerBase
 {
     private readonly ControlDbContext _controlDb;
     private readonly TenantProvisioningService _provisioning;
+    private readonly IEmailSender _emailSender;
+    private readonly IConfiguration _config;
 
-    public TenantsController(ControlDbContext controlDb, TenantProvisioningService provisioning)
+    public TenantsController(ControlDbContext controlDb, TenantProvisioningService provisioning, IEmailSender emailSender, IConfiguration config)
     {
         _controlDb = controlDb;
         _provisioning = provisioning;
+        _emailSender = emailSender;
+        _config = config;
     }
 
     [HttpPost("registro")]
@@ -39,6 +44,14 @@ public class TenantsController : ControllerBase
             NombreBaseDatos = $"pqrs_tenant_{slug}",
             EstadoProvisionamiento = EstadoProvisionamiento.Pendiente
         };
+
+        var origenes = new List<string> { request.DominioPermitido };
+        if (request.DominiosPermitidos is not null)
+            origenes.AddRange(request.DominiosPermitidos.Where(d => !string.IsNullOrWhiteSpace(d)));
+        origenes = origenes.Select(o => o.Trim().TrimEnd('/')).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        tenant.Dominios = origenes.Select(o => new TenantDominio { Id = Guid.NewGuid(), Origen = o }).ToList();
+        tenant.DominioPermitido = origenes[0];
 
         _controlDb.Tenants.Add(tenant);
         await _controlDb.SaveChangesAsync(ct);
@@ -63,19 +76,37 @@ public class TenantsController : ControllerBase
 
         await _controlDb.SaveChangesAsync(ct);
 
-        return CreatedAtAction(nameof(Registrar), new { id = tenant.Id }, new
+        // Enviar las credenciales al administrador por correo. Si el SMTP no está
+        // configurado o falla, se devuelven en la respuesta (flujo de desarrollo).
+        var panelBase = _config["App:PanelBaseUrl"] ?? "http://localhost:8080";
+        var enviado = await _emailSender.EnviarAsync(
+            request.EmailAdministrador,
+            "Tus credenciales de acceso · PQRS SaaS",
+            CredentialEmailBuilder.Bienvenida(request.EmailAdministrador, request.EmailAdministrador, passwordAdmin, tenant.Slug, $"{panelBase}/agent/", tenant.Nombre),
+            ct);
+
+        var respuesta = new
         {
             tenant.Id,
             tenant.Nombre,
             tenant.Slug,
             tenant.ApiKeyWidget,
-            credencialesAdmin = new
-            {
-                request.EmailAdministrador,
-                password = passwordAdmin,
-                aviso = "Esta contraseña solo se muestra una vez. Guárdala ahora."
-            }
-        });
+            credenciales = enviado
+                ? (object)new
+                {
+                    emailAdministrador = request.EmailAdministrador,
+                    enviadasPorCorreo = true,
+                    aviso = "Las credenciales fueron enviadas al correo del administrador. Debe cambiarlas en su primer ingreso."
+                }
+                : (object)new
+                {
+                    emailAdministrador = request.EmailAdministrador,
+                    password = passwordAdmin,
+                    aviso = "SMTP no configurado: esta contraseña solo se muestra una vez. Guárdala ahora."
+                }
+        };
+
+        return CreatedAtAction(nameof(Registrar), new { id = tenant.Id }, respuesta);
     }
 
     private static string GenerarSlug(string nombre)

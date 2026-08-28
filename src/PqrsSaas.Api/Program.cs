@@ -2,13 +2,21 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using PqrsSaas.Api.Cors;
 using PqrsSaas.Api.Middleware;
 using PqrsSaas.Application;
+using PqrsSaas.Infrastructure.Integrations;
 using PqrsSaas.Infrastructure.Persistence;
 using PqrsSaas.Infrastructure.Provisioning;
 using PqrsSaas.Infrastructure.Security;
+using PqrsSaas.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Mantener los tipos de claim tal como se emiten en el token (sub, role, tenantId...).
+// Sin esto, el handler de JWT re-mapea "sub" a nameidentifier y User.FindFirst("sub")
+// devolvería null.
+System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
 
 // --- Base de control (una sola, compartida) ---
 builder.Services.AddDbContext<ControlDbContext>(opt =>
@@ -21,6 +29,15 @@ builder.Services.AddDbContext<CoreDbContext>(); // sin UseNpgsql aquí: lo resue
 builder.Services.AddScoped<TenantProvisioningService>();
 builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<TokenService>();
+
+// Cliente HTTP hacia Gemini + servicios de IA.
+builder.Services.AddHttpClient<GeminiService>();
+builder.Services.AddScoped<TriajeService>();
+builder.Services.AddSingleton<DocumentIngestionService>();
+
+// Email (SMTP). Si no hay Smtp:Host configurado, no se envía correo y las
+// credenciales temporales se devuelven en la respuesta (dev).
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 // --- Autenticación JWT ---
 var jwtSecret = builder.Configuration["Jwt:Secret"]
@@ -44,12 +61,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddControllers();
+// CORS dinámico por tenant: la política se resuelve en cada request según el
+// Origin y el DominioPermitido del tenant (ver TenantCorsPolicyProvider).
+builder.Services.AddCors();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Cors.Infrastructure.ICorsPolicyProvider, TenantCorsPolicyProvider>();
+
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR(); // hub de notificaciones en tiempo real (módulo 7)
-
-// TODO (módulo 5-6): registrar el cliente HttpClient hacia la API de Gemini.
 
 var app = builder.Build();
 
@@ -59,6 +80,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.UseHttpsRedirection();
+app.UseCors();
 // Orden importante: autenticación primero (llena context.User), luego el
 // middleware de tenant (que lee el claim tenantId de context.User), luego
 // autorización ([Authorize] ya puede evaluar el usuario autenticado).

@@ -22,6 +22,34 @@ namespace PqrsSaas.Infrastructure.Migrations.Control
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("PqrsSaas.Domain.Entities.SuperAdmin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("SuperAdmins");
+                });
+
             modelBuilder.Entity("PqrsSaas.Domain.Entities.Tenant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -66,7 +94,7 @@ namespace PqrsSaas.Infrastructure.Migrations.Control
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Tenants", (string)null);
+                    b.ToTable("Tenants");
                 });
 
             modelBuilder.Entity("PqrsSaas.Domain.Entities.TenantConfiguracion", b =>
@@ -95,7 +123,28 @@ namespace PqrsSaas.Infrastructure.Migrations.Control
                     b.HasIndex("TenantId")
                         .IsUnique();
 
-                    b.ToTable("TenantConfiguraciones", (string)null);
+                    b.ToTable("TenantConfiguraciones");
+                });
+
+            modelBuilder.Entity("PqrsSaas.Domain.Entities.TenantDominio", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Origen")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Origen")
+                        .IsUnique();
+
+                    b.ToTable("TenantDominios");
                 });
 
             modelBuilder.Entity("PqrsSaas.Domain.Entities.TenantConfiguracion", b =>
@@ -109,9 +158,22 @@ namespace PqrsSaas.Infrastructure.Migrations.Control
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("PqrsSaas.Domain.Entities.TenantDominio", b =>
+                {
+                    b.HasOne("PqrsSaas.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("Dominios")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("PqrsSaas.Domain.Entities.Tenant", b =>
                 {
                     b.Navigation("Configuracion");
+
+                    b.Navigation("Dominios");
                 });
 #pragma warning restore 612, 618
         }

@@ -80,7 +80,8 @@ public class TenantProvisioningService
         {
             Id = Guid.NewGuid(),
             Email = emailAdministrador,
-            Rol = RolUsuario.Administrador
+            Rol = RolUsuario.Administrador,
+            DebeCambiarPassword = true
         };
         admin.PasswordHash = _passwordService.Hash(admin, passwordGenerada);
 

@@ -20,6 +20,20 @@ public class Tenant
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
     public TenantConfiguracion? Configuracion { get; set; }
+
+    public ICollection<TenantDominio> Dominios { get; set; } = new List<TenantDominio>();
+}
+
+/// <summary>
+/// Origen permitido (CORS) de un tenant. Un tenant puede tener varios orígenes
+/// (p. ej. https://cliente.com y https://www.cliente.com).
+/// </summary>
+public class TenantDominio
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public Tenant Tenant { get; set; } = default!;
+    public string Origen { get; set; } = default!;
 }
 
 public class TenantConfiguracion

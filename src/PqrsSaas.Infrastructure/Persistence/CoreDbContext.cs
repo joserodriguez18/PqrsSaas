@@ -43,12 +43,21 @@ public class CoreDbContext : DbContext
         modelBuilder.Entity<KnowledgeBaseArticle>(e =>
         {
             e.Property(a => a.Embedding).HasColumnType("vector(768)");
+            // pgvector >= 0.8 requiere el operador de clase explícito en el índice HNSW.
+            e.HasIndex(a => a.Embedding).HasMethod("hnsw").HasOperators("vector_cosine_ops");
         });
 
-        modelBuilder.Entity<User>(e => e.Property(u => u.Rol).HasConversion<string>());
+        modelBuilder.Entity<User>(e =>
+        {
+            e.Property(u => u.Rol).HasConversion<string>();
+            e.Property(u => u.Activo).HasDefaultValue(true);
+            e.Property(u => u.DebeCambiarPassword).HasDefaultValue(false);
+        });
 
         modelBuilder.Entity<Ticket>(e =>
         {
+            e.Property(t => t.NumeroRadicado).IsRequired();
+            e.HasIndex(t => t.NumeroRadicado).IsUnique();
             e.Property(t => t.Tipo).HasConversion<string>();
             e.Property(t => t.Estado).HasConversion<string>();
             e.Property(t => t.Prioridad).HasConversion<string>();

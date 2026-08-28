@@ -53,7 +53,7 @@ public class AuthController : ControllerBase
 
         var user = await _coreDb.Users.FirstOrDefaultAsync(u => u.Email == request.Email, ct);
 
-        if (user is null || !_passwordService.Verify(user, request.Password))
+        if (user is null || !user.Activo || !_passwordService.Verify(user, request.Password))
             return Unauthorized("Credenciales inválidas.");
 
         var token = _tokenService.GenerarToken(user, tenant);
@@ -61,7 +61,7 @@ public class AuthController : ControllerBase
         return Ok(new
         {
             token,
-            usuario = new { user.Id, user.Email, Rol = user.Rol.ToString() },
+            usuario = new { user.Id, user.Email, Rol = user.Rol.ToString(), user.DebeCambiarPassword },
             tenant = new { tenant.Id, tenant.Slug, tenant.Nombre }
         });
     }

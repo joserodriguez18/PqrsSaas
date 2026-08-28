@@ -41,7 +41,15 @@ namespace PqrsSaas.Infrastructure.Migrations.Core
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Titulo")
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("Embedding");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Embedding"), "hnsw");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("Embedding"), new[] { "vector_cosine_ops" });
 
                     b.ToTable("KnowledgeBaseArticles");
                 });
@@ -72,8 +80,15 @@ namespace PqrsSaas.Infrastructure.Migrations.Core
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("FechaActualizacion")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NumeroRadicado")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("Prioridad")
                         .HasColumnType("text");
@@ -94,6 +109,9 @@ namespace PqrsSaas.Infrastructure.Migrations.Core
 
                     b.HasIndex("Estado");
 
+                    b.HasIndex("NumeroRadicado")
+                        .IsUnique();
+
                     b.HasIndex("Prioridad");
 
                     b.ToTable("Tickets");
@@ -105,9 +123,22 @@ namespace PqrsSaas.Infrastructure.Migrations.Core
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("DebeCambiarPassword")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()

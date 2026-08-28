@@ -13,6 +13,9 @@ public class User
     public string Email { get; set; } = default!;
     public string PasswordHash { get; set; } = default!;
     public RolUsuario Rol { get; set; } = RolUsuario.Agente;
+    public bool Activo { get; set; } = true;
+    public bool DebeCambiarPassword { get; set; } = false;
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }
 
 public class KnowledgeBaseArticle
@@ -20,6 +23,10 @@ public class KnowledgeBaseArticle
     public Guid Id { get; set; }
     public string Pregunta { get; set; } = default!;
     public string Respuesta { get; set; } = default!;
+
+    // Fuente (nombre del documento) cuando el artículo proviene de una ingesta
+    // automática de archivos; null para FAQs creadas manualmente.
+    public string? Titulo { get; set; }
 
     // Generado con gemini-embedding-001, output_dimensionality=768
     public Vector Embedding { get; set; } = default!;
@@ -58,6 +65,7 @@ public enum SentimientoTicket
 public class Ticket
 {
     public Guid Id { get; set; }
+    public string NumeroRadicado { get; set; } = default!;
     public string ClienteNombre { get; set; } = default!;
     public string ClienteCorreo { get; set; } = default!;
     public string Asunto { get; set; } = default!;
@@ -72,4 +80,5 @@ public class Ticket
     public EstadoTicket Estado { get; set; } = EstadoTicket.Pendiente;
     public bool ResueltoPorRAG { get; set; } = false;
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+    public DateTime FechaActualizacion { get; set; } = DateTime.UtcNow;
 }
