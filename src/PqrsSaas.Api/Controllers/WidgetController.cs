@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Pgvector;
 using Pgvector.EntityFrameworkCore;
+using PqrsSaas.Api.Hubs;
+using PqrsSaas.Api.Middleware;
 using PqrsSaas.Domain.Entities;
 using PqrsSaas.Infrastructure.Integrations;
 using PqrsSaas.Infrastructure.Persistence;
@@ -24,13 +27,15 @@ public class WidgetController : ControllerBase
     private readonly GeminiService _gemini;
     private readonly TriajeService _triaje;
     private readonly IConfiguration _config;
+    private readonly IHubContext<TicketsHub> _hub;
 
-    public WidgetController(CoreDbContext coreDb, GeminiService gemini, TriajeService triaje, IConfiguration config)
+    public WidgetController(CoreDbContext coreDb, GeminiService gemini, TriajeService triaje, IConfiguration config, IHubContext<TicketsHub> hub)
     {
         _coreDb = coreDb;
         _gemini = gemini;
         _triaje = triaje;
         _config = config;
+        _hub = hub;
     }
 
     /// <summary>
@@ -173,6 +178,24 @@ public class WidgetController : ControllerBase
 
         _coreDb.Tickets.Add(ticket);
         await _coreDb.SaveChangesAsync(ct);
+
+        // Notifica en tiempo real a los agentes de este tenant (grupo tenant-<id>).
+        if (HttpContext.Items.TryGetValue(TenantResolutionMiddleware.TenantIdKey, out var tenantIdObj) &&
+            tenantIdObj is Guid tenantId)
+        {
+            await _hub.Clients.Group(TicketsHub.GrupoTenant(tenantId.ToString())).SendAsync("TicketNuevo", new
+            {
+                ticket.Id,
+                ticket.NumeroRadicado,
+                ticket.ClienteNombre,
+                ticket.ClienteCorreo,
+                ticket.Asunto,
+                ticket.Tipo,
+                ticket.Prioridad,
+                ticket.Sentimiento,
+                ticket.Estado
+            }, ct);
+        }
 
         return CreatedAtAction(nameof(CrearTicket), new { id = ticket.Id }, new
         {

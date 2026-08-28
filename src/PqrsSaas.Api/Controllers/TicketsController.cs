@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using PqrsSaas.Api.Hubs;
 using PqrsSaas.Domain.Entities;
 using PqrsSaas.Infrastructure.Integrations;
 using PqrsSaas.Infrastructure.Persistence;
@@ -16,10 +18,12 @@ public record ActualizarPrioridadRequest(PrioridadTicket Prioridad);
 public class TicketsController : ControllerBase
 {
     private readonly CoreDbContext _coreDb;
+    private readonly IHubContext<TicketsHub> _hub;
 
-    public TicketsController(CoreDbContext coreDb)
+    public TicketsController(CoreDbContext coreDb, IHubContext<TicketsHub> hub)
     {
         _coreDb = coreDb;
+        _hub = hub;
     }
 
     [HttpGet]
@@ -80,6 +84,8 @@ public class TicketsController : ControllerBase
         ticket.FechaActualizacion = DateTime.UtcNow;
         await _coreDb.SaveChangesAsync(ct);
 
+        await NotificarActualizacionAsync(ticket, ct);
+
         return Ok(ticket);
     }
 
@@ -94,6 +100,28 @@ public class TicketsController : ControllerBase
         ticket.FechaActualizacion = DateTime.UtcNow;
         await _coreDb.SaveChangesAsync(ct);
 
+        await NotificarActualizacionAsync(ticket, ct);
+
         return Ok(ticket);
+    }
+
+    /// <summary>
+    /// Emite el evento TicketActualizado a los agentes del mismo tenant que el
+    /// usuario autenticado (claim tenantId), para sincronizar la vista en vivo.
+    /// </summary>
+    private async Task NotificarActualizacionAsync(Ticket ticket, CancellationToken ct)
+    {
+        var tenantId = User.FindFirst("tenantId")?.Value;
+        if (Guid.TryParse(tenantId, out _))
+        {
+            await _hub.Clients.Group(TicketsHub.GrupoTenant(tenantId!)).SendAsync("TicketActualizado", new
+            {
+                ticket.Id,
+                ticket.NumeroRadicado,
+                ticket.Estado,
+                ticket.Prioridad,
+                ticket.FechaActualizacion
+            }, ct);
+        }
     }
 }

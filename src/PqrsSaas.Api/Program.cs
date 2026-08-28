@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PqrsSaas.Api.Cors;
+using PqrsSaas.Api.Hubs;
 using PqrsSaas.Api.Middleware;
 using PqrsSaas.Application;
 using PqrsSaas.Infrastructure.Integrations;
@@ -57,6 +58,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1)
         };
+        // SignalR no puede poner el header Authorization en el handshake de
+        // WebSocket desde el navegador; el token viaja por query string (?access_token=).
+        // Lo leemos aquí solo para las rutas del hub.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var path = context.HttpContext.Request.Path;
+                if (path.StartsWithSegments("/hubs"))
+                {
+                    var token = context.Request.Query["access_token"].FirstOrDefault();
+                    if (!string.IsNullOrEmpty(token))
+                        context.Token = token;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -89,6 +107,6 @@ app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
-// TODO (módulo 7): app.MapHub<TicketsHub>("/hubs/tickets");
+app.MapHub<TicketsHub>("/hubs/tickets");
 
 app.Run();

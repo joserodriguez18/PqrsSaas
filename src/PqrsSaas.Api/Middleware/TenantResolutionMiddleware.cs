@@ -6,6 +6,8 @@ namespace PqrsSaas.Api.Middleware;
 
 public class TenantResolutionMiddleware
 {
+    public const string TenantIdKey = "TenantId";
+
     private readonly RequestDelegate _next;
 
     public TenantResolutionMiddleware(RequestDelegate next)
@@ -42,6 +44,7 @@ public class TenantResolutionMiddleware
 
             var template = config.GetConnectionString("TenantTemplate")!;
             accessor.ConnectionString = template.Replace("{db}", tenant.NombreBaseDatos);
+            context.Items[TenantIdKey] = tenant.Id;
         }
         else if (!string.IsNullOrEmpty(tenantIdClaim) && Guid.TryParse(tenantIdClaim, out var tenantId))
         {
@@ -59,6 +62,7 @@ public class TenantResolutionMiddleware
 
             var template = config.GetConnectionString("TenantTemplate")!;
             accessor.ConnectionString = template.Replace("{db}", tenant.NombreBaseDatos);
+            context.Items[TenantIdKey] = tenant.Id;
         }
 
         // Si no se resolvió ningún tenant aquí no fallamos: hay rutas (registro de

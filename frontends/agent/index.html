@@ -6,6 +6,7 @@
     <title>Panel de Agentes · PQRS SaaS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@9.0.19/dist/browser/signalr.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
@@ -95,9 +96,12 @@
                         </button>
                         <h1 id="app-title" class="text-lg font-bold text-gray-900">Tickets PQRS</h1>
                     </div>
-                    <a href="#" id="logout-btn-mobile" class="md:hidden text-gray-500 hover:text-rose-600">
-                        <i class="fas fa-sign-out-alt text-xl"></i>
-                    </a>
+                    <div class="flex items-center gap-3">
+                        <span id="rt-status" class="w-3 h-3 rounded-full bg-gray-300" title="Tiempo real"></span>
+                        <a href="#" id="logout-btn-mobile" class="md:hidden text-gray-500 hover:text-rose-600">
+                            <i class="fas fa-sign-out-alt text-xl"></i>
+                        </a>
+                    </div>
                 </header>
 
                 <main id="app-content" class="flex-1 p-4 md:p-6 overflow-y-auto">

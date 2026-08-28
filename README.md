@@ -292,6 +292,7 @@ frontends/
 | `/widget/pqrs-widget.js` | Widget JS incrustable |
 | `/widget/demo.html` | Demo del widget |
 | `/api/v1/*` | API (proxy a `api:8080`) |
+| `/hubs/tickets` | SignalR (WebSockets) — notificaciones en tiempo real para agentes |
 | `/` | Landing |
 
 ### Desarrollo local (sin Docker)
@@ -343,7 +344,7 @@ dotnet ef database update -c ControlDbContext -p src/PqrsSaas.Infrastructure -s 
 - ✅ **Dashboard de super administrador** (`frontends/super-admin/`), en `http://localhost:8080/superadmin/`.
 - ✅ **Dashboard de agentes** (`frontends/agent/`), en `http://localhost:8080/agent/` (roles, tickets, KB, gestión de agentes).
 - ✅ **Widget JS** (`frontends/widget/`), en `http://localhost:8080/widget/pqrs-widget.js` (chat RAG → formulario → radicado).
-- ⏳ **Pendiente:** SignalR (notificaciones en tiempo real).
+- ✅ **SignalR** — notificaciones en tiempo real para agentes: ticket nuevo (al radicar desde el widget) y cambios de estado/prioridad (sincronización entre agentes), en `/hubs/tickets`.
 - Los frontends se sirven por rutas vía nginx (`frontends/nginx.conf`); la API también sigue accesible directa en el puerto 5000 para desarrollo/Swagger.
 
 ## Documentación adicional

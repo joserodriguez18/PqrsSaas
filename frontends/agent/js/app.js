@@ -5,6 +5,7 @@ import { apiRequest } from './api.js';
 import { render as renderTickets } from './tickets.js';
 import { render as renderKb } from './kb-articles.js';
 import { render as renderAgents } from './agents.js';
+import { initRealtime, stopRealtime } from './realtime.js';
 
 const Swal = window.Swal;
 const appContent = () => document.getElementById('app-content');
@@ -37,6 +38,7 @@ function init() {
     if (Auth.isAuthenticated()) {
         showApp();
         configureSidebar();
+        try { initRealtime(); } catch (e) { console.error('initRealtime', e); }
         navigate('tickets');
     } else {
         showLogin();
@@ -52,12 +54,13 @@ function onLogin(e) {
     btn.disabled = true;
     btn.textContent = 'Ingresando...';
 
-    Auth.login(slug, email, password)
+            Auth.login(slug, email, password)
         .then((data) => {
             lastPassword = password;
             showToast('Bienvenido', 'success');
             showApp();
             configureSidebar();
+            try { initRealtime(); } catch (e) { console.error('initRealtime', e); }
             navigate('tickets');
             if (data.usuario.debeCambiarPassword) {
                 forcePasswordChange();
@@ -78,6 +81,7 @@ function onLogout(e) {
     }).then((res) => {
         if (res.isConfirmed) {
             Auth.logout();
+            stopRealtime();
             showLogin();
         }
     });
